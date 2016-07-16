@@ -1,9 +1,10 @@
 package io.pivotal.literx;
 
+import org.junit.Test;
+
 import io.pivotal.literx.domain.User;
 import io.pivotal.literx.repository.ReactiveRepository;
 import io.pivotal.literx.repository.ReactiveUserRepository;
-import org.junit.Test;
 import reactor.core.publisher.Flux;
 import reactor.core.test.TestSubscriber;
 
@@ -29,7 +30,7 @@ public class Part05Request {
 
 	// TODO Create a TestSubscriber that requests initially no value
 	TestSubscriber<User> createSubscriber(Flux<User> flux) {
-		return null;
+		return TestSubscriber.subscribe(flux, 0);
 	}
 
 //========================================================================================
@@ -60,7 +61,7 @@ public class Part05Request {
 
 	// TODO Request one value
 	void requestOne(TestSubscriber<User> testSubscriber) {
-
+		testSubscriber.request(1);
 	}
 
 //========================================================================================
@@ -91,7 +92,7 @@ public class Part05Request {
 
 	// TODO Return a Flux with all users stored in the repository that prints automatically logs for all Reactive Streams signals
 	Flux<User> fluxWithLog() {
-		return null;
+		return repository.findAll().log();
 	}
 
 
@@ -123,7 +124,10 @@ public class Part05Request {
 
 	// TODO Return a Flux with all users stored in the repository that prints "Starring:" on subscribe, "firstname lastname" for all values and "The end!" on complete
 	Flux<User> fluxWithDoOnPrintln() {
-		return null;
+		return repository.findAll()
+				.doOnSubscribe(s -> System.out.println("Starring: "))
+				.doOnNext(u -> System.out.println(String.join(" ", u.getFirstname(), u.getLastname())))
+				.doOnComplete(()-> System.out.println("The end!"));
 	}
 
 }

@@ -22,6 +22,9 @@ import io.pivotal.literx.domain.User;
 import io.pivotal.literx.repository.ReactiveRepository;
 import io.pivotal.literx.repository.ReactiveUserRepository;
 import org.junit.Test;
+
+import reactor.core.converter.RxJava1ObservableConverter;
+import reactor.core.converter.RxJava1SingleConverter;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 import reactor.core.test.TestSubscriber;
@@ -57,12 +60,12 @@ public class Part08Conversion {
 
 	// TODO Convert Flux to RxJava Observable thanks to a Reactor converter
 	Observable<User> fromFluxToObservable(Flux<User> flux) {
-		return null;
+		return RxJava1ObservableConverter.from(flux);
 	}
 
 	// TODO Convert RxJava Observable to Flux thanks to a Reactor converter
 	Flux<User> fromObservableToFlux(Observable<User> observable) {
-		return null;
+		return RxJava1ObservableConverter.from(observable);
 	}
 
 //========================================================================================
@@ -80,12 +83,12 @@ public class Part08Conversion {
 
 	// TODO Convert Mono to RxJava Single thanks to a Reactor converter
 	Single<User> fromMonoToSingle(Mono<User> mono) {
-		return null;
+		return RxJava1SingleConverter.from(mono);
 	}
 
 	// TODO Convert RxJava Single to Mono thanks to a Reactor converter
 	Mono<User> fromSingleToMono(Single<User> single) {
-		return null;
+		return RxJava1SingleConverter.from(single);
 	}
 
 //========================================================================================
@@ -103,12 +106,12 @@ public class Part08Conversion {
 
 	// TODO Convert Mono to Java 8+ CompletableFuture thanks to a Reactor converter
 	CompletableFuture<User> fromMonoToCompletableFuture(Mono<User> mono) {
-		return null;
+		return mono.toFuture();
 	}
 
 	// TODO Convert Java 8+ CompletableFuture to Mono thanks to a Reactor converter
 	Mono<User> fromCompletableFutureToMono(CompletableFuture<User> future) {
-		return null;
+		return Mono.fromFuture(future);
 	}
 
 

@@ -48,7 +48,7 @@ public class Part09BlockingToReactive {
 
 	// TODO Create a Flux for reading all users from the blocking repository, and run it with an elastic scheduler
 	Flux<User> blockingRepositoryToFlux(BlockingRepository<User> repository) {
-		return null;
+		return Flux.defer(()->Flux.fromIterable(repository.findAll())).subscribeOn(Schedulers.elastic());
 	}
 
 //========================================================================================
@@ -73,7 +73,7 @@ public class Part09BlockingToReactive {
 
 	// TODO Insert users contained in the Flux parameter in the blocking repository using a parallel scheduler
 	Mono<Void> fluxToBlockingRepository(Flux<User> flux, BlockingRepository<User> repository) {
-		return null;
+		return flux.parallel().runOn(Schedulers.parallel()).doOnNext(user -> repository.save(user)).sequential().then();
 	}
 
 //========================================================================================
@@ -94,7 +94,7 @@ public class Part09BlockingToReactive {
 
 	// TODO Return a valid Mono of user for null input and non null input user (hint: Reactive Streams does not accept null values)
 	Mono<User> nullAwareUserToMono(User user) {
-		return null;
+		return Mono.justOrEmpty(user);
 	}
 
 }
