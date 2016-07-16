@@ -33,7 +33,7 @@ public class Part06OtherOperations {
 
 	// TODO Create a Flux of user from Flux of username, firstname and lastname.
 	Flux<User> userFluxFromStringFlux(Flux<String> usernameFlux, Flux<String> firstnameFlux, Flux<String> lastnameFlux) {
-		return Flux.zip((Object[] array) -> new User((String)array[0], (String)array[1], (String)array[2]),usernameFlux, firstnameFlux, lastnameFlux);
+		return Flux.zip(usernameFlux, firstnameFlux, lastnameFlux).map(userTuple -> new User(userTuple.t1, userTuple.t2, userTuple.t3));
 	}
 
 //========================================================================================
