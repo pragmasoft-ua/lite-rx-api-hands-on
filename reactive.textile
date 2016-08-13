@@ -1,0 +1,59 @@
+h1. General information 
+
+As a result of this investigation we gained following results:
+
+# Research showed that all three platforms have potential possibilities to utilize reactive (webhook based) approach in order to reduce the number of cloud api requests, system load, and improve overall performance. 
+# It turned out, that because of different level of maturity, cloud providers have number of problems in implementations of reactive solutions, which need to be taken into account, when implementation will be started.
+# Recommended approach is to combine reactive webhooks with the usage of resource managers on all three platforms. Resource managers, like [AWS CloudFormation|https://aws.amazon.com/documentation/cloudformation], [Google Cloud Deployment|https://cloud.google.com/deployment-manager/docs/], [Azure Resource Manager|https://azure.microsoft.com/en-us/documentation/articles/resource-group-overview/] allow coordinated management of a bunch of resources, named *stack* or *resource group* as a single entity, so that cloud provider takes responsibility for maintaining consistency and atomicity of stack's resources.
+
+h2. AWS approach 
+
+Among three cloud providers, AWS is the most mature one, so not surprisingly first successful prototype was built for this platform. In prototype we used following AWS technologies:
+
+# [AWS CloudFormation|https://aws.amazon.com/documentation/cloudformation] stack definition is a json file, containing list of resources to be managed (created, deleted) in a coordinated fashion. CloudFormation api allows to create entire stack with one API call. 
+# [AWS Simple Notification Service|https://aws.amazon.com/sns/details/] provides logical Topics, to which publishers can publish notification messages, and subscribers can receive them. In our prototype CloudFormation service has a publisher role, and our application is a subscriber of notification messages, sent to pre-created  topic. Every provider connection should have its own unique topic, where notifications about CloudFormation stacks, created with this provider connection's account are published. 
+
+h3. AWS challenges
+
+Although AWS based prototype is able to successfully start entire stack with one single API call (not counting SNS api calls needed to create topic once per provider connection creation) there are still several minor challenges which needs to be resolved:
+
+#  CloudFormation stack definition (template) does not support parameterized number of stack resources, or cycles, so in order to create N resources, like EC2 instances, the same resource definition will need to occur in template N times. The proposed solution is to pre-process base templates with template processors like [Pebble|http://www.mitchellbosecke.com/pebble/home] or custom processors, performing modifications of parsed JSON object model.
+# There exists requirement, that some stack's resources need to be created ahead of others. In theory, it should be possible to achieve with stack update requests, but this will complicate stack template creation, as in fact it will require two or more templates: one for initial stage, and changeset templates for later stages. Due to this complexity this feature was not prototyped. 
+
+h2. Azure approach 
+
+Azure also showed the possibility to utilize similar approach to AWS, because Azure Resource Manager (ARM) API also supports declarative deployment templates. The tricky task was to implement webhook notifications, because this part of Azure API is new, experimental, not documented, and not implemented in java SDK. Our prototype work is based on information from [this article|http://www.paasmag.com/2016/04/01/new-features-for-azure-alerts-and-autoscale/]. For webhook notifications we use [Azure Insights API|https://msdn.microsoft.com/en-us/library/azure/dn931943.aspx] to configure alerts, which can listen to specific azure event log entries, and send webhook notification, when log events, matching to filter criteria, happened. In our case we listened to Resource Manager deployment events.
+
+Currently prototype of Azure reactive deployment solution is not fully completed, but at least entire approach was proved to be working with manual API operations and Azure CLI tool.  
+
+h3. Azure challenges
+
+1. The biggest unresolved problem in Azure so far is a big latency between time, when listened event happened, and when alert notification triggered. Below is quote from the article I mentioned above, and we experienced 10-15 minute delays during our experiments: 
+
+bq. Please note the feature is still in preview and the alerts on events can incur a delay of fifteen minutes. In the coming months, we will make significant performance improvements to the alert engine for events and will release user interface support in the Azure Portal for configuring and managing these alerts.
+
+For the period of 4 months this problem was not fixed, so I afraid, that if we will decide to change our implementation soon, we have no other choice, than either tolerate this delay, or use polling, which may still be a big improvement if we decide to use ARM template based deployment, because in this case we only need to poll status of one resource (deployment itself) rather than individual statuses of all resources it contains.  
+
+2. Unlike CloudFormation in AWS, when deployment is deleted, resources allocated to it are not deleted automatically. Microsoft suggests to use resource group per deployment, and when deployment is not needed, delete resource group, which deletes all resources it contains. I recommend to follow this approach of one resource group per deployment (Axis event).
+
+h2. Google Cloud approach
+
+Surprisingly, worst situation with webhooks is on the Google cloud platform. We tried to implement similar solution to the Azure. We used [Cloud Deployment Manager|https://cloud.google.com/deployment-manager/] API to initiate coordinated operation on the group of resources. Then, we planned to use [Google StackDriver|https://cloud.google.com/stackdriver/]'s capability to export system logs events to configured [Cloud Pub/Sub|https://cloud.google.com/pubsub/] topic. Finally, we planned to use Cloud Pub/Sub API to subscribe to this topic in order to receive and handle these events in our prototype application. 
+
+Unfortunately, although all parts independently worked as expected, we still are unable to implement working prototype on Google Cloud platform, due to challenges described below. For no we're looking for ways to overcome some/all challenges and provide working prototype.    
+
+h3. Google cloud challenges
+
+# It turned out, that it is currently impossible to create subscription to Cloud Pub/Sub topic, which sends events to http(s) webhook endpoint in unattended mode, that is, with application logic only interacting with Google Cloud API, without manual intervention. Google is concerned with possible abuse, which may happen if arbitrary URL is registered as a receiver of notification events. Google requires the webhook url to be verified as owned by api user, which we managed to do automatically, but then Google requires it to be added to the list of trusted endpoints in Google API console, which is a manual operation only. I even [created an issue|https://code.google.com/p/cloud-pubsub/issues/detail?id=40] to solve this problem, but it was rejected. For now there's no way to solve this problem technically. The only way is to complicate Axis provider connection's setup instructions, and ask end users to add webhook url in Google cloud console as part of authentication credentials set up procedure.
+
+# Unfortunately only very limited list of events for now are added to Stackdriver log and thus can be exported to Pub/Sub topic and consumed by application code. Creations of individual cloud compute resources are logged, but calls of Google Deployment manager aren't so it's just not possible to correlate individual resource events to the concrete deployment event. We're currently investigating possibility to include into deployment scenario some lightweight unused cloud compute resource, which will a) depend on all other resources, and thus only be created after all other resources in deployment template were successfully created; b) its creation was logged into Stackdriver's log; and c) It's name or other logged property may carry deployment identifier. Then status of this resource may be utilized as status of the entire deployment.
+
+  
+
+
+
+    
+
+
+
+ 
