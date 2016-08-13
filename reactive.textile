@@ -45,15 +45,6 @@ Unfortunately, although all parts independently worked as expected, we still are
 h3. Google cloud challenges
 
 # It turned out, that it is currently impossible to create subscription to Cloud Pub/Sub topic, which sends events to http(s) webhook endpoint in unattended mode, that is, with application logic only interacting with Google Cloud API, without manual intervention. Google is concerned with possible abuse, which may happen if arbitrary URL is registered as a receiver of notification events. Google requires the webhook url to be verified as owned by api user, which we managed to do automatically, but then Google requires it to be added to the list of trusted endpoints in Google API console, which is a manual operation only. I even [created an issue|https://code.google.com/p/cloud-pubsub/issues/detail?id=40] to solve this problem, but it was rejected. For now there's no way to solve this problem technically. The only way is to complicate Axis provider connection's setup instructions, and ask end users to add webhook url in Google cloud console as part of authentication credentials set up procedure.
-
 # Unfortunately only very limited list of events for now are added to Stackdriver log and thus can be exported to Pub/Sub topic and consumed by application code. Creations of individual cloud compute resources are logged, but calls of Google Deployment manager aren't so it's just not possible to correlate individual resource events to the concrete deployment event. We're currently investigating possibility to include into deployment scenario some lightweight unused cloud compute resource, which will a) depend on all other resources, and thus only be created after all other resources in deployment template were successfully created; b) its creation was logged into Stackdriver's log; and c) It's name or other logged property may carry deployment identifier. Then status of this resource may be utilized as status of the entire deployment.
-
-  
-
-
-
-    
-
-
 
  
